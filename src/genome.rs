@@ -1,21 +1,44 @@
 use crate::definitions::*;
-use random_number::random;
+use rand::Rng;
 
 pub fn genome_split_gene(gene: u32) -> [u8; 4] {
+    // TODO: Docstring
     let source_id: u8 = ((gene & SOURCE_ID_BITMASK) >> 24) as u8;
     let source_w: u8 = ((gene & SOURCE_W_BITMASK) >> 16) as u8;
     let source_b: u8 = ((gene & SOURCE_B_BITMASK) >> 8) as u8;
     let sink_id: u8 = (gene & SINK_ID_BITMASK) as u8;
-    // println!("{gene:b} -> {source_id:0>8b} {source_w:0>8b} {source_b:0>8b} {sink_id:0>8b}");
     let genes: [u8; 4] = [source_id, source_w, source_b, sink_id];
     genes
 }
 
-fn genome_generate_random_byte() -> u8 {
-    random!()
+pub fn genome_generate_random_genome() -> Vec<u32> {
+    // TODO: UnitTest
+    // TODO: Docstring
+    let mut genome: Vec<u32> = Vec::new();
+    for x in 1..GENOMA_SIZE {
+        genome.push(genome_generate_random_gene());
+    };
+    genome
 }
 
-pub fn genome_generate_gene() -> u32 {
+pub fn genome_mutate_genome(genome: &mut Vec<u32>) -> &mut Vec<u32> {
+    // TODO: UnitTest
+    // TODO: Docstring
+    let mut iterator: std::slice::IterMut<'_, u32> = genome.iter_mut(); 
+    while let Some(gene) = iterator.next() { 
+        genome_mutate_gene(gene); 
+    }
+    genome
+}
+
+fn genome_generate_random_byte() -> u8 {
+    /// Returns a randomly generated u8 (a gene is made up of 4 independent bytes)
+    let random_byte: u8 = rand::thread_rng().gen_range(0..u8::MAX+1);
+    random_byte
+}
+
+fn genome_generate_random_gene() -> u32 {
+    // TODO: Docstring
     let mut gene: u32 = 0;
     for x in 1..5 {
         let byte: u8 = genome_generate_random_byte();
@@ -30,6 +53,16 @@ pub fn genome_generate_gene() -> u32 {
     gene
 }
 
+fn genome_mutate_gene(gene: &mut u32) -> &mut u32 {
+    // TODO: UnitTest
+    // TODO: Docstring
+    let draw_random = rand::thread_rng().gen_range(0..GENOME_MUTATION_TRIES);
+    if draw_random < GENOME_MUTATION_RATE {
+        let mut mutation_mask: u32 = 1;
+        *gene ^= mutation_mask << rand::thread_rng().gen_range(0..32);
+    }
+    gene
+}
 
 #[cfg(test)]
 mod tests {
