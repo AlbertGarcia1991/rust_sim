@@ -1,7 +1,7 @@
 use crate::definitions::*;
 use random_number::random;
 
-pub fn genome_split_genes(gene: u32) -> [u8; 4] {
+pub fn genome_split_gene(gene: u32) -> [u8; 4] {
     let source_id: u8 = ((gene & SOURCE_ID_BITMASK) >> 24) as u8;
     let source_w: u8 = ((gene & SOURCE_W_BITMASK) >> 16) as u8;
     let source_b: u8 = ((gene & SOURCE_B_BITMASK) >> 8) as u8;
@@ -37,12 +37,27 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_genome_split_genes() {
+    fn test_genome_split_gene() {
         let gene: u32 = 1234567890;
-        let gene_array: [u8; 4] = genome_split_genes(gene);
+        let gene_array: [u8; 4] = genome_split_gene(gene);
         assert_eq!(((gene & SOURCE_ID_BITMASK) >> 24) as u8, gene_array[0]);
         assert_eq!(((gene & SOURCE_W_BITMASK) >> 16) as u8, gene_array[1]);
         assert_eq!(((gene & SOURCE_B_BITMASK) >> 8) as u8, gene_array[2]);
         assert_eq!((gene & SINK_ID_BITMASK) as u8, gene_array[3]);
+    }
+
+    #[test]
+    fn test_genome_generate_gen() {
+        let gene_static: u32 = 0xAFA9BEEC;
+        let mut gene: u32 = 0;
+        for x in 1..5 {
+            match x {
+                1 => gene = gene | ((0xAF as u32) << 24),
+                2 => gene = gene | ((0xA9 as u32) << 16),
+                3 => gene = gene | ((0xBE as u32) << 8),
+                _ => gene = gene | 0xEC as u32
+            };
+        };
+        assert_eq!(gene_static, gene);
     }
 }
