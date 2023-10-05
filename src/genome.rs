@@ -4,22 +4,23 @@ use std::mem;
 use std::cmp;
 use std::sync::atomic;
 
-static GENE_ID: atomic::AtomicUsize = atomic::AtomicUsize::new(0);
+/// Unique counter of a Genome instance (every time we create a new instance, is increased by 1)
+static GENOME_ID: atomic::AtomicUsize = atomic::AtomicUsize::new(0);
 
-/// Increases by one the value of the GENE_ID counter
+/// Increases by one the value of the GENOME_ID counter
 fn bump_counter() {
-    GENE_ID.fetch_add(0, atomic::Ordering::SeqCst);
+    GENOME_ID.fetch_add(0, atomic::Ordering::SeqCst);
 }
 
-/// Returns the current value of the GENE_ID counter
+/// Returns the current value of the GENOME_ID counter
 pub fn get_counter() -> usize {
-    GENE_ID.load(atomic::Ordering::SeqCst)
+    GENOME_ID.load(atomic::Ordering::SeqCst)
 }
 
-/// Increases by one the value of the GENE_ID counter and returns this new value
+/// Increases by one the value of the GENOME_ID counter and returns this new value
 fn draw_counter() -> usize {
     bump_counter();
-    let curr_counter: usize = GENE_ID.load(atomic::Ordering::SeqCst);
+    let curr_counter: usize = GENOME_ID.load(atomic::Ordering::SeqCst);
     curr_counter
 }
 
@@ -47,7 +48,6 @@ struct Gene {
 /// of Genes. This vector has a fixed length of GENOME_SIZE genes inside. The identifier is unique 
 /// for each Genome, hence, two different instances of Genome will have a different id even if they 
 /// have the same adn inside.
-// LEARN: Different between Clone and Copy, and how they work
 // LEARN: Debug attribute?
 #[derive(Debug, Clone)]
 struct Genome {
@@ -172,7 +172,7 @@ impl Genome {
     pub fn new_random() -> Self {
         let genome_id: u32 = draw_counter() as u32;
         let mut adn: Vec<Gene> = Vec::new();
-        for _gene_idx in 0..GENOME_SIZE {
+        for _GENOME_IDx in 0..GENOME_SIZE {
             let gene = Gene::new_random();
             adn.push(gene);
         }
