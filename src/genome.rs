@@ -1,96 +1,199 @@
 use crate::definitions::*;
 use rand::Rng;
+use std::mem;
+use std::cmp;
+use std::sync::atomic;
 
-pub fn genome_split_gene(gene: u32) -> [u8; 4] {
-    // TODO: Docstring
-    let source_id: u8 = ((gene & SOURCE_ID_BITMASK) >> 24) as u8;
-    let source_w: u8 = ((gene & SOURCE_W_BITMASK) >> 16) as u8;
-    let source_b: u8 = ((gene & SOURCE_B_BITMASK) >> 8) as u8;
-    let sink_id: u8 = (gene & SINK_ID_BITMASK) as u8;
-    let genes: [u8; 4] = [source_id, source_w, source_b, sink_id];
-    genes
+static COUNTER: atomic::AtomicUsize = atomic::AtomicUsize::new(0);
+
+fn bump_counter() {
+    // Add one using the most conservative ordering.
+    COUNTER.fetch_add(1, atomic::Ordering::SeqCst);
 }
 
-pub fn genome_generate_random_genome() -> Vec<u32> {
-    // TODO: UnitTest
-    // TODO: Docstring
-    let mut genome: Vec<u32> = Vec::new();
-    for x in 1..GENOMA_SIZE {
-        genome.push(genome_generate_random_gene());
-    };
-    genome
+fn draw_counter() -> usize {
+    let curr_counter: usize = COUNTER.load(atomic::Ordering::SeqCst);
+    bump_counter();
+    curr_counter
 }
 
-pub fn genome_mutate_genome(genome: &mut Vec<u32>) -> &mut Vec<u32> {
-    // TODO: UnitTest
-    // TODO: Docstring
-    let mut iterator: std::slice::IterMut<'_, u32> = genome.iter_mut(); 
-    while let Some(gene) = iterator.next() { 
-        genome_mutate_gene(gene); 
+pub fn get_counter() -> usize {
+    COUNTER.load(atomic::Ordering::SeqCst)
+}
+
+// Main structures
+struct Gene {
+    source: u8,
+    weight: u8,
+    bias: u8,
+    sink: u8,
+    value: u32,
+}
+
+struct Genome {
+    id: u32,
+    adn: Vec<Gene>
+}
+
+// Traits overloading
+impl std::fmt::Display for Gene {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}.{}.{}.{}", self.source, self.weight, self.bias, self.sink)
     }
-    genome
 }
 
-fn genome_generate_random_byte() -> u8 {
-    /// Returns a randomly generated u8 (a gene is made up of 4 independent bytes)
-    let random_byte: u8 = rand::thread_rng().gen_range(0..u8::MAX+1);
-    random_byte
+impl cmp::PartialEq for Gene {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value
+    } 
+    
+    fn ne(&self, other: &Self) -> bool {
+        self.value != other.value
+    } 
 }
 
-fn genome_generate_random_gene() -> u32 {
+// Custom traits
+impl Gene {
     // TODO: Docstring
-    let mut gene: u32 = 0;
-    for x in 1..5 {
-        let byte: u8 = genome_generate_random_byte();
-        match x {
-            1 => gene = gene | ((byte as u32) << 24),
-            2 => gene = gene | ((byte as u32) << 16),
-            3 => gene = gene | ((byte as u32) << 8),
-            _ => gene = gene | (byte as u32)
-        };
-        println!("GENE {x}: {byte:0>8b} -> {gene:0>32b}");
-    };
-    gene
-}
-
-fn genome_mutate_gene(gene: &mut u32) -> &mut u32 {
-    // TODO: UnitTest
-    // TODO: Docstring
-    let draw_random = rand::thread_rng().gen_range(0..GENOME_MUTATION_TRIES);
-    if draw_random < GENOME_MUTATION_RATE {
-        let mut mutation_mask: u32 = 1;
-        *gene ^= mutation_mask << rand::thread_rng().gen_range(0..32);
+    pub fn new_from_bytes(bytes: [u8; 4]) -> Self {
+        unsafe {
+            Gene {
+                source: bytes[0],
+                weight: bytes[1],
+                bias: bytes[2],
+                sink: bytes[3],
+                value: mem::transmute(bytes),
+            }
+        }
     }
-    gene
+
+    // TODO: Docstring
+    // TODO: UnitTest
+    pub fn new_random() -> Self {
+        let max_value_u8: u16 = u8::MAX as u16 + 1;
+        unsafe {
+            let mut gene: Gene = Gene {
+                source: rand::thread_rng().gen_range(0..max_value_u8) as u8,
+                weight: rand::thread_rng().gen_range(0..max_value_u8) as u8,
+                bias: rand::thread_rng().gen_range(0..max_value_u8) as u8,
+                sink: rand::thread_rng().gen_range(0..max_value_u8) as u8,
+                value: 0,
+            };
+            gene.value = mem::transmute([gene.source, gene.weight, gene.bias, gene.sink]);
+            gene
+        }
+    }
+
+    // TODO: Docstring
+    // TODO: UnitTest
+    pub fn rebuild(&mut self) {
+        unsafe {
+            let bytes: [u8; 4] = mem::transmute(self.value);
+            self.source = bytes[0];
+            self.weight = bytes[1];
+            self.bias = bytes[2];
+            self.sink = bytes[3];
+        }
+    }
+    
+    // TODO: Docstring
+    // TODO: UnitTest
+    fn to_bytes(&self) -> [u8; 4] {
+        let bytes: [u8; 4] = [self.source, self.weight, self.bias, self.sink];
+        bytes
+    }
+
+    // TODO: Docstring
+    // TODO: UnitTest
+    fn mutate_random(&mut self) {
+        let draw_random = rand::thread_rng().gen_range(0..GENOME_MUTATION_TRIES);
+        if draw_random < GENOME_MUTATION_RATE {
+            let mutation_mask: u32 = 1;
+            self.value ^= mutation_mask << rand::thread_rng().gen_range(0..32);
+            self.rebuild();
+        }
+    }
+
+    // TODO: Docstring
+    // TODO: UnitTest
+    fn mutate_on_rate(&mut self, rate: u16) {
+        let draw_random = rand::thread_rng().gen_range(0..GENOME_MUTATION_TRIES);
+        if draw_random < rate {
+            let mutation_mask: u32 = 1;
+            self.value ^= mutation_mask << rand::thread_rng().gen_range(0..32);
+            self.rebuild();
+        }
+    }
+
+    // TODO: Docstring
+    // TODO: UnitTest
+    fn mutate_deterministic(&mut self) {
+        let mutation_mask: u32 = 1;
+        self.value ^= mutation_mask << rand::thread_rng().gen_range(0..32);
+        self.rebuild();
+    }
+
+    fn print_binary(&self) {
+        println!("{:0<8b}{:0<8b}{:0<8b}{:0<8b}", self.source, self.weight, self.bias, self.sink);
+    }
+
+    fn print_bytes(&self) {
+        println!("{}.{}.{}.{}", self.source, self.weight, self.bias, self.sink);
+    }
+
 }
+
+impl Genome {
+    // TODO: Docstring
+    // TODO: UnitTest
+    pub fn new_random() -> Self {
+        let genome_id: u32 = draw_counter() as u32;
+        let mut adn: Vec<Gene> = Vec::new();
+        for _gene_idx in 0..GENOME_SIZE {
+            let gene = Gene::new_random();
+            adn.push(gene);
+        }
+        Genome {id: genome_id, adn: adn}
+    }
+
+    // TODO: Docstring
+    // TODO: UnitTest
+    pub fn mutate_random(&mut self) {
+        for gene in self.adn.iter_mut() {
+            gene.mutate_random();
+        }
+    }
+
+    // TODO: Docstring
+    // TODO: UnitTest
+    pub fn mutate_deterministic(&mut self) {
+        for gene in self.adn.iter_mut() {
+            gene.mutate_deterministic();
+        }
+    }
+
+    // TODO: Docstring
+    // TODO: UnitTest
+    pub fn mutate_on_rate(&mut self, rate: u16) {
+        for gene in self.adn.iter_mut() {
+            gene.mutate_on_rate(rate);
+        }
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
-    use crate::definitions::*;
     use super::*;
 
     #[test]
-    fn test_genome_split_gene() {
-        let gene: u32 = 1234567890;
-        let gene_array: [u8; 4] = genome_split_gene(gene);
-        assert_eq!(((gene & SOURCE_ID_BITMASK) >> 24) as u8, gene_array[0]);
-        assert_eq!(((gene & SOURCE_W_BITMASK) >> 16) as u8, gene_array[1]);
-        assert_eq!(((gene & SOURCE_B_BITMASK) >> 8) as u8, gene_array[2]);
-        assert_eq!((gene & SINK_ID_BITMASK) as u8, gene_array[3]);
+    fn test_genome_to_bytes() {
+        let gene: Gene = Gene::new_from_bytes([0b11111111, 0b01111110, 0b11100111, 0b00000001]);
+        let bytes: [u8; 4] = gene.to_bytes();
+        assert_eq!(0b11111111, bytes[0]);
+        assert_eq!(0b01111110, bytes[1]);
+        assert_eq!(0b11100111, bytes[2]);
+        assert_eq!(0b00000001, bytes[3]);
     }
 
-    #[test]
-    fn test_genome_generate_gen() {
-        let gene_static: u32 = 0xAFA9BEEC;
-        let mut gene: u32 = 0;
-        for x in 1..5 {
-            match x {
-                1 => gene = gene | ((0xAF as u32) << 24),
-                2 => gene = gene | ((0xA9 as u32) << 16),
-                3 => gene = gene | ((0xBE as u32) << 8),
-                _ => gene = gene | 0xEC as u32
-            };
-        };
-        assert_eq!(gene_static, gene);
-    }
 }
