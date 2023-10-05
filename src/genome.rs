@@ -29,6 +29,7 @@ fn draw_counter() -> usize {
 /// of the previous four values, being source the MSB and sink the LSH. Hence, two Genes are unique 
 /// if and only if they hold the same value. This is also very useful to understand at each 
 /// iteration the ADN diversity of the entities
+#[derive(Debug, Clone)]
 struct Gene {
     /// Source neuron id
     source: u8,
@@ -46,6 +47,7 @@ struct Gene {
 /// of Genes. This vector has a fixed length of GENOME_SIZE genes inside. The identifier is unique 
 /// for each Genome, hence, two different instances of Genome will have a different id even if they 
 /// have the same adn inside.
+#[derive(Debug)]
 struct Genome {
     /// Unique identifier of the Genome
     id: u32,
@@ -89,7 +91,6 @@ impl Gene {
         }
     }
 
-    // TODO: UnitTest
     /// Constructor of a Gene to create it randomly. The unique value for that combination of genes 
     /// is computed automatically. It is unsafe since we are transmuting those four bytes to 
     /// generate the unique value.
@@ -108,7 +109,6 @@ impl Gene {
         }
     }
 
-    // TODO: UnitTest
     /// Trait to assign a value to each one of the four bytes of the Gene based on the Gene's
     /// unique value.
     fn rebuild(&mut self) {
@@ -121,14 +121,12 @@ impl Gene {
         }
     }
     
-    // TODO: UnitTest
     //// Trait to return the four bytes of a Gene as an array.
     fn to_bytes(&self) -> [u8; 4] {
         let bytes: [u8; 4] = [self.source, self.weight, self.bias, self.sink];
         bytes
     }
 
-    // TODO: UnitTest
     /// Trait to perform a random mutation on a Gene. We understand as mutation the flip of a single 
     /// bit only in one of the 4 bytes of the Gene. 
     fn mutate_random(&mut self) {
@@ -140,7 +138,6 @@ impl Gene {
         }
     }
 
-    // TODO: UnitTest
     /// Trait to perform a mutation on a Gene based on the given odds. Odds is the probability of a 
     /// mutation as a part per mil (e.g. if odds=10, there is 1% of chances to mutate: 10 / 1000). 
     /// We understand as mutation the flip of a single bit only in one of the 4 bytes of the Gene.
@@ -153,7 +150,6 @@ impl Gene {
         }
     }
 
-    // TODO: UnitTest
     /// Trait to always mutate the Gene. We understand as mutation the flip of a single bit only in 
     /// one of the 4 bytes of the Gene.
     fn mutate_deterministic(&mut self) {
@@ -208,10 +204,10 @@ impl Genome {
 
     /// Trait to print the whole Genome sequence.
     pub fn print(&self) {
-        println!("Genoma ID: {}", self.id);
+        println!("Genome ID: {}", self.id);
         let mut gene_counter: u8 = 1;
         for gene in self.adn.iter() {
-            println!("Gen {gene_counter}:\t{}", gene.value)
+            println!("Gen {gene_counter}:\t{}", gene.value);
             gene_counter += 1;
         }
     }
@@ -223,6 +219,51 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_genome_new_from_bytes() {
+        let gene_a: Gene = Gene::new_from_bytes([0b11111111, 0b01111110, 0b11100111, 0b00000001]);
+        let gene_a_copy: Gene = Gene::new_from_bytes([0b11111111, 0b01111110, 0b11100111, 0b00000001]);
+        let gene_b: Gene = Gene::new_from_bytes([0b11111111, 0b01111110, 0b11100111, 0b10000001]);
+        assert_eq!(gene_a, gene_a_copy);
+        assert_ne!(gene_a, gene_b);
+    }
+
+    #[test]
+    fn test_genome_new_random() {
+        // FIXME: This is a probabilistic test, how to make it robust?
+        let gene_a: Gene = Gene::new_random();
+        let gene_b: Gene = Gene::new_random();
+        assert_ne!(gene_a, gene_b);
+    }
+
+    #[test]
+    fn test_rebuild() {
+        let mut gene_a: Gene = Gene::new_random();
+        let gene_b: Gene = gene_a.clone();
+        gene_a.value += 1;
+        gene_a.rebuild();
+        assert_ne!(gene_a, gene_b);
+        assert_eq!(gene_a, gene_a);
+    }
+
+    #[test]
+    fn test_mutate_on_odds_always() {
+        let mut gene_a: Gene = Gene::new_random();
+        let gene_b: Gene = gene_a.clone();
+        gene_a.mutate_on_odds(1000);
+        assert_ne!(gene_a, gene_b);
+        assert_eq!(gene_a, gene_a);
+    }
+
+    #[test]
+    fn test_mutate_on_odds_never() {
+        let mut gene_a: Gene = Gene::new_random();
+        let gene_b: Gene = gene_a.clone();
+        gene_a.mutate_on_odds(0);
+        assert_eq!(gene_a, gene_b);
+        assert_eq!(gene_a, gene_a);
+    }
+
+    #[test]
     fn test_genome_to_bytes() {
         let gene: Gene = Gene::new_from_bytes([0b11111111, 0b01111110, 0b11100111, 0b00000001]);
         let bytes: [u8; 4] = gene.to_bytes();
@@ -230,6 +271,15 @@ mod tests {
         assert_eq!(0b01111110, bytes[1]);
         assert_eq!(0b11100111, bytes[2]);
         assert_eq!(0b00000001, bytes[3]);
+    }
+
+    #[test]
+    fn test_mutate_deterministic() {
+        let mut gene_a: Gene = Gene::new_random();
+        let gene_b: Gene = gene_a.clone();
+        gene_a.mutate_deterministic();
+        assert_ne!(gene_a, gene_b);
+        assert_eq!(gene_a, gene_a);
     }
 
 }
