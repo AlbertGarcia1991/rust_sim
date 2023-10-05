@@ -47,7 +47,9 @@ struct Gene {
 /// of Genes. This vector has a fixed length of GENOME_SIZE genes inside. The identifier is unique 
 /// for each Genome, hence, two different instances of Genome will have a different id even if they 
 /// have the same adn inside.
-#[derive(Debug)]
+// LEARN: Different between Clone and Copy, and how they work
+// LEARN: Debug attribute?
+#[derive(Debug, Clone)]
 struct Genome {
     /// Unique identifier of the Genome
     id: u32,
@@ -166,7 +168,6 @@ impl Gene {
 }
 
 impl Genome {
-    // TODO: UnitTest
     /// Constructor to create Genome object with a random adn sequence.
     pub fn new_random() -> Self {
         let genome_id: u32 = draw_counter() as u32;
@@ -178,7 +179,6 @@ impl Genome {
         Genome {id: genome_id, adn: adn}
     }
 
-    // TODO: UnitTest
     /// Trait to perform a random mutation on each Gene. 
     pub fn mutate_random(&mut self) {
         for gene in self.adn.iter_mut() {
@@ -186,7 +186,6 @@ impl Genome {
         }
     }
 
-    // TODO: UnitTest
     /// Trait to perform a certain mutation on each Gene. 
     pub fn mutate_deterministic(&mut self) {
         for gene in self.adn.iter_mut() {
@@ -194,7 +193,6 @@ impl Genome {
         }
     }
 
-    // TODO: UnitTest
     /// Trait to perform a mutation on each Gene based on the given odds. 
     pub fn mutate_on_odds(&mut self, odds: u16) {
         for gene in self.adn.iter_mut() {
@@ -216,10 +214,12 @@ impl Genome {
 
 #[cfg(test)]
 mod tests {
+    use crate::genome;
+
     use super::*;
 
     #[test]
-    fn test_genome_new_from_bytes() {
+    fn test_gene_new_from_bytes() {
         let gene_a: Gene = Gene::new_from_bytes([0b11111111, 0b01111110, 0b11100111, 0b00000001]);
         let gene_a_copy: Gene = Gene::new_from_bytes([0b11111111, 0b01111110, 0b11100111, 0b00000001]);
         let gene_b: Gene = Gene::new_from_bytes([0b11111111, 0b01111110, 0b11100111, 0b10000001]);
@@ -228,7 +228,7 @@ mod tests {
     }
 
     #[test]
-    fn test_genome_new_random() {
+    fn test_gene_new_random() {
         // FIXME: This is a probabilistic test, how to make it robust?
         let gene_a: Gene = Gene::new_random();
         let gene_b: Gene = Gene::new_random();
@@ -236,7 +236,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rebuild() {
+    fn test_gene_rebuild() {
         let mut gene_a: Gene = Gene::new_random();
         let gene_b: Gene = gene_a.clone();
         gene_a.value += 1;
@@ -246,7 +246,18 @@ mod tests {
     }
 
     #[test]
-    fn test_mutate_on_odds_always() {
+    fn test_gene_transmute_unpacking() {
+        let mut gene_a: Gene = Gene::new_random();
+        let gene_b: Gene = gene_a.clone();
+        gene_a.rebuild();
+        assert_eq!(gene_a.source, gene_b.source);
+        assert_eq!(gene_a.weight, gene_b.weight);
+        assert_eq!(gene_a.bias, gene_b.bias);
+        assert_eq!(gene_a.sink, gene_b.sink);
+    }
+
+    #[test]
+    fn test_gene_mutate_on_odds_always() {
         let mut gene_a: Gene = Gene::new_random();
         let gene_b: Gene = gene_a.clone();
         gene_a.mutate_on_odds(1000);
@@ -255,7 +266,7 @@ mod tests {
     }
 
     #[test]
-    fn test_mutate_on_odds_never() {
+    fn test_gene_mutate_on_odds_never() {
         let mut gene_a: Gene = Gene::new_random();
         let gene_b: Gene = gene_a.clone();
         gene_a.mutate_on_odds(0);
@@ -264,7 +275,7 @@ mod tests {
     }
 
     #[test]
-    fn test_genome_to_bytes() {
+    fn test_gene_to_bytes() {
         let gene: Gene = Gene::new_from_bytes([0b11111111, 0b01111110, 0b11100111, 0b00000001]);
         let bytes: [u8; 4] = gene.to_bytes();
         assert_eq!(0b11111111, bytes[0]);
@@ -274,12 +285,36 @@ mod tests {
     }
 
     #[test]
-    fn test_mutate_deterministic() {
+    fn test_gene_mutate_deterministic() {
         let mut gene_a: Gene = Gene::new_random();
         let gene_b: Gene = gene_a.clone();
         gene_a.mutate_deterministic();
         assert_ne!(gene_a, gene_b);
         assert_eq!(gene_a, gene_a);
+    }
+
+    #[test]
+    fn test_genome_mutate_deterministic() {
+        let mut genome_a: Genome = Genome::new_random();
+        let genome_b: Genome = genome_a.clone();
+        genome_a.mutate_deterministic();
+        assert_ne!(genome_a.adn, genome_b.adn);
+    }
+
+    #[test]
+    fn test_genome_mutate_on_odds_always() {
+        let mut genome_a: Genome = Genome::new_random();
+        let genome_b: Genome = genome_a.clone();
+        genome_a.mutate_on_odds(1000);
+        assert_ne!(genome_a.adn, genome_b.adn);
+    }
+
+    #[test]
+    fn test_genome_mutate_on_odds_never() {
+        let mut genome_a: Genome = Genome::new_random();
+        let genome_b: Genome = genome_a.clone();
+        genome_a.mutate_on_odds(0);
+        assert_eq!(genome_a.adn, genome_b.adn);
     }
 
 }
