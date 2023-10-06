@@ -48,7 +48,6 @@ struct Gene {
 /// of Genes. This vector has a fixed length of GENOME_SIZE genes inside. The identifier is unique 
 /// for each Genome, hence, two different instances of Genome will have a different id even if they 
 /// have the same adn inside.
-// LEARN: Debug attribute?
 #[derive(Debug, Clone)]
 struct Genome {
     /// Unique identifier of the Genome
@@ -172,7 +171,7 @@ impl Genome {
     pub fn new_random() -> Self {
         let genome_id: u32 = draw_counter() as u32;
         let mut adn: Vec<Gene> = Vec::new();
-        for _GENOME_IDx in 0..GENOME_SIZE {
+        for _x in 0..GENOME_SIZE {
             let gene = Gene::new_random();
             adn.push(gene);
         }
@@ -203,10 +202,8 @@ impl Genome {
     /// Trait to print the whole Genome sequence.
     pub fn print(&self) {
         println!("Genome ID: {}", self.id);
-        let mut gene_counter: u8 = 1;
-        for gene in self.adn.iter() {
-            println!("Gen {gene_counter}:\t{}", gene.value);
-            gene_counter += 1;
+        for (idx, gene) in self.adn.iter().enumerate() {
+            println!("Gen {idx}:\t{}", gene.value);
         }
     }
 }
@@ -214,8 +211,6 @@ impl Genome {
 
 #[cfg(test)]
 mod tests {
-    use crate::genome;
-
     use super::*;
 
     #[test]
@@ -224,14 +219,6 @@ mod tests {
         let gene_a_copy: Gene = Gene::new_from_bytes([0b11111111, 0b01111110, 0b11100111, 0b00000001]);
         let gene_b: Gene = Gene::new_from_bytes([0b11111111, 0b01111110, 0b11100111, 0b10000001]);
         assert_eq!(gene_a, gene_a_copy);
-        assert_ne!(gene_a, gene_b);
-    }
-
-    #[test]
-    fn test_gene_new_random() {
-        // FIXME: This is a probabilistic test, how to make it robust?
-        let gene_a: Gene = Gene::new_random();
-        let gene_b: Gene = Gene::new_random();
         assert_ne!(gene_a, gene_b);
     }
 
