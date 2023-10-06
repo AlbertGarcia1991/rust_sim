@@ -3,9 +3,11 @@
 
 mod genome;
 mod definitions;
+mod world;
 
 
 /// Project trying to replicate the amazing word done by https://github.com/davidrmille on his 
 /// project biosim4, while I learn to code on Rust :)
 fn main() {
+    pollster::block_on(world::run());
 }

@@ -215,9 +215,12 @@ mod tests {
 
     #[test]
     fn test_gene_new_from_bytes() {
-        let gene_a: Gene = Gene::new_from_bytes([0b11111111, 0b01111110, 0b11100111, 0b00000001]);
-        let gene_a_copy: Gene = Gene::new_from_bytes([0b11111111, 0b01111110, 0b11100111, 0b00000001]);
-        let gene_b: Gene = Gene::new_from_bytes([0b11111111, 0b01111110, 0b11100111, 0b10000001]);
+        let gene_a: Gene =
+            Gene::new_from_bytes([0b11111111, 0b01111110, 0b11100111, 0b00000001]);
+        let gene_a_copy: Gene = 
+            Gene::new_from_bytes([0b11111111, 0b01111110, 0b11100111, 0b00000001]);
+        let gene_b: Gene =
+            Gene::new_from_bytes([0b11111111, 0b01111110, 0b11100111, 0b10000001]);
         assert_eq!(gene_a, gene_a_copy);
         assert_ne!(gene_a, gene_b);
     }
